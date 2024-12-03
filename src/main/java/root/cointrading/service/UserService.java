@@ -7,9 +7,7 @@ import java.sql.SQLException;
 import java.util.Scanner;
 
 public class UserService {
-    private int currentUserId = -1;
-
-    public void login(Connection connection, Scanner scanner) {
+    public int login(Connection connection, Scanner scanner) {
         System.out.print("Enter username: ");
         String username = scanner.nextLine();
         System.out.print("Enter password: ");
@@ -21,14 +19,15 @@ public class UserService {
             stmt.setString(2, password);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                currentUserId = rs.getInt("id");
                 System.out.println("Login successful!");
+                return rs.getInt("id");
             } else {
                 System.out.println("Invalid credentials. Try again.");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return -1;
     }
 
     public void registerUser(Connection connection, Scanner scanner) {
@@ -47,7 +46,7 @@ public class UserService {
             ResultSet rs = stmt.getGeneratedKeys();
             if (rs.next()) {
                 int userId = rs.getInt(1);
-                TradingService.addInitialDeposit(connection, userId, initialDeposit);
+                addInitialDeposit(connection, userId, initialDeposit);
                 System.out.println("Registration successful! You can now log in.");
             }
         } catch (SQLException e) {
@@ -55,12 +54,18 @@ public class UserService {
         }
     }
 
-    public void logout() {
-        currentUserId = -1;
-        System.out.println("Logged out successfully.");
+    private void addInitialDeposit(Connection connection, int userId, double amount) {
+        String sql = "INSERT INTO wallets (user_id, coin, balance) VALUES (?, 'USD', ?)";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            stmt.setDouble(2, amount);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public int getCurrentUserId() {
-        return currentUserId;
+    public void logout() {
+        System.out.println("Logged out successfully.");
     }
 }
